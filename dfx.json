@@ -1,8 +1,15 @@
 {
   "canisters": {
-    "inda_social_backend": {
+    "backend": {
       "main": "src/inda_social_backend/main.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "declarations": {
+        "output": "./src/inda_social_frontend/src/declarations/backend"
+      }
+    },
+    "frontend" : {
+      "type": "assets",
+      "source": ["src/inda_social_frontend/dist"]
     }
   },
   "defaults": {
