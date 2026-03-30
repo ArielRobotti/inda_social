@@ -8,7 +8,7 @@ import ConnectWallet from './ConnectWallet';
 
 const WalletSection: React.FC = () => {
   return (
-    <section className="py-20 md:py-32 bg-inda-light relative overflow-hidden">
+    <section className="py-20 md:py-32 bg-white relative overflow-hidden">
       {/* Elementos decorativos */}
       <div className="absolute bottom-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-inda-blue/20 to-inda-purple/20 rounded-tl-[100px] blur-2xl"></div>
       

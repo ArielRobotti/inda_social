@@ -57,7 +57,7 @@ module {
   };
 
   public type EditableData = {
-    firtsName : Text;
+    firstName : Text;
     lastName: Text;
     email : ?Text;
     bio : Text;
@@ -84,6 +84,7 @@ module {
     principal : Principal;
     scoring : Nat;
     lastActivity : Int;
+    roleRequestedOrAsigned: Bool; 
     verifications : [Verification];
   };
 
@@ -121,7 +122,7 @@ module {
   // ===============================================
 
   public type UserDataInit = {
-    firtsName : Text;
+    firstName : Text;
     lastName : Text;
     email: ?Text;
     bio: Text;
@@ -151,7 +152,7 @@ module {
 
   public type State = {
     users : Map.Map<Principal, User>;
-    requests: Map.Map<Principal, [Request]>;
+    requests: Map.Map<Principal, Request>;
     creators : Map.Map<Principal, Creator>;
     brands : Map.Map<Principal, Brand>;
     partnerships : Map.Map<Principal, Partnership>;
@@ -171,39 +172,33 @@ module {
       principal = caller;
       thumbnail = null;
       lastActivity = now();
+      roleRequestedOrAsigned = false;
       scoring : Nat = 0;
       verifications = [];
     }
   };
 
-  func newCreator(dataInit: CreatorDataInit, caller: Principal): Creator {
-    { dataInit with  verified : Bool = false }
-  };
+  // func newCreator(dataInit: CreatorDataInit, caller: Principal): Creator {
+  //   { dataInit with  verified : Bool = false }
+  // };
 
-  func pushRequest(s: State, r: Request, u: Principal) {
-    let currentReq = switch (Map.get<Principal, [Request]>(s.requests, phash, u)){
-      case null [];
-      case (?v) v;
-    };
-    let updateRequests = Array.tabulate<Request>(
-      currentReq.size() + 1,
-      func i = if( i == 0 ){ r } else { currentReq [i - 1: Nat ]} 
-    );
-    ignore Map.put<Principal, [Request]>(s.requests, phash, u, updateRequests)
+  func pushRequest(s: State, r: Request, u: Principal) { 
+    ignore Map.put(s.requests, phash, u, r)
   };
 
   // ===============================================
   // 6. Funciones Publicas
   // ===============================================
 
-  public func init() : State {
+  public func init(admin: Principal) : State {
     {
       users = Map.new<Principal, User>();
-      requests = Map.new<Principal, [Request]>();
+      requests = Map.new<Principal, Request>();
       creators = Map.new<Principal, Creator>();
       brands = Map.new<Principal, Brand>();
       partnerships = Map.new<Principal, Partnership>();
-      admins = Set.new<Principal>();
+      admins = Set.make<Principal>(phash, admin);
+      // admins = Set.new<Principal>();
     };
   };
 
@@ -221,29 +216,49 @@ module {
     };
   };
 
-  public func requestCreatorProfile(s: State, caller: Principal, dataInit: CreatorDataInit): {#Ok: Int; #Err: Text} {
-    if (not isUser(s, caller)) { return #Err("UserNotFound") };
-    if (isCreator(s, caller)) {return #Err("User is already a creator")};
-    let currentRequests = switch (Map.get<Principal, [Request]>(s.requests, phash, caller)) {
-      case null [];
-      case ( ?requests ) requests;
-    };
-    for (r in currentRequests.vals()){
-      switch (r.kind) {
-        case (#NewCreator(_)){
-          return #Err("There is already a creator registration request under id # " # Int.toText(r.id))
+  public func updateDateProfile(s: State, caller : Principal, inputData: EditableData) : SignUpResponse {
+    switch (Map.get<Principal, User>(s.users, phash, caller)) {
+      case null return #Err(#Msg("User not found"));
+      case (?user) {
+        let isVerificatedEmail = Array.find<Verification>(user.verifications, func v = v == #Email) != null;
+        let verified = isVerificatedEmail and (user.email != inputData.email);
+        let {avatar; bio; email; firstName; lastName; metadata; thumbnail} = inputData;
+        let updatedUser = {
+          user with 
+          avatar;
+          bio;
+          email;
+          firstName;
+          lastName;
+          metadata;
+          thumbnail;
+          verified;
         };
-        case _ { }
+        ignore Map.put(s.users, phash, caller, updatedUser);
+        #Ok(updatedUser)
       };
     };
-    let id = now();
-    let newRequest: Request = {
-      metadata = [];
-      id ;
-      kind = #NewCreator(dataInit)
+  };
+
+  public func requestCreatorProfile(s: State, caller: Principal, dataInit: CreatorDataInit): {#Ok: Int; #Err: Text} {
+    switch (getUser(s, caller)) {
+      case null return #Err("UserNotFound");
+      case ( ?user ) {
+        if(user.roleRequestedOrAsigned) {
+          return #Err("The user already has a role assigned or requested")
+        } else {
+          let id = now();
+          let newRequest: Request = {
+            metadata = [];
+            id ;
+            kind = #NewCreator(dataInit)
+          };
+          ignore Map.put(s.users, phash, caller, {user with roleRequestedOrAsigned = true});
+          pushRequest(s, newRequest, caller);
+          #Ok(id)
+        }
+      }
     };
-    pushRequest(s, newRequest, caller);
-    #Ok(id)
   };
 
   public func login(s : State, caller : Principal) : LoginResponse {
@@ -291,9 +306,19 @@ module {
   };
 
   /// Admin functions 
-  public func getAllRequests(s: State, caller: Principal): {#Ok: [(Principal, [Request])]; #Err: Text} {
+  public func getAllRequests(s: State, caller: Principal): {#Ok: [(Principal, Request)]; #Err: Text} {
     if(not isAdmin(s, caller)) { return #Err("Access denied")};
-    #Ok((Map.toArray<Principal, [Request]>(s.requests)));
+    #Ok((Map.toArray(s.requests)));
+  };
+
+
+  public func addAdmin(s: State, caller: Principal, newAdmin: Principal): { #Ok; #Err } {
+    if(not isAdmin(s, caller)) { return #Err};
+    ignore Set.put(s.admins, phash, newAdmin);
+    #Ok
   }
 
+  // ===============================================
+  // 6. Funciones Publicas
+  // ===============================================
 };

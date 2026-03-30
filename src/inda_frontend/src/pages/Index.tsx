@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import FeatureSection from '@/components/FeatureSection';
-import WalletSection from '@/components/WalletSection';
+// import WalletSection from '@/components/WalletSection';
 import Footer from '@/components/Footer';
 import { ArrowRight, ChevronRight, Lock, Zap, BarChart3, Award, Users, Globe } from 'lucide-react';
 import ScrollReveal from '@/components/ScrollReveal';
@@ -32,8 +32,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
+    <div className="min-h-screen">
       <Hero />
       <FeatureSection />
       
@@ -118,7 +117,7 @@ const Index = () => {
         </div>
       </section>
       
-      <WalletSection />
+      {/* <WalletSection /> */}
       
       <section id="roadmap" className="py-20 md:py-32 bg-white relative overflow-hidden">
         <div className="container mx-auto px-4">
@@ -192,7 +191,7 @@ const Index = () => {
         </div>
       </section>
       
-      <section id="community" className="py-20 md:py-32 bg-inda-light relative overflow-hidden">
+      <section id="community" className="py-20 md:py-32 bg-white relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <ScrollReveal>

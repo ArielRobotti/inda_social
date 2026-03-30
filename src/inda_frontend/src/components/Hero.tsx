@@ -15,7 +15,7 @@ const Hero: React.FC = () => {
     <div className="relative min-h-screen flex flex-col justify-center overflow-hidden">
       {/* Background con overlay de gradiente */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-inda-black to-inda-dark opacity-90"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-inda-black to-inda-dark opacity-80"></div>
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519389950473-47ba0277781c')] bg-cover bg-center opacity-30 mix-blend-overlay"></div>
       </div>
       

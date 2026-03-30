@@ -4,13 +4,17 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "skipLibCheck": true,
+    
 
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "types": ["node", "vite/client"],
 
     /* Linting */
     "strict": true,
