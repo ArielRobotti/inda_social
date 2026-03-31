@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Camera, Save, Shield, User as UserIcon } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Camera, Save, Shield, User as UserIcon, Fingerprint, Copy } from 'lucide-react';
 import Button from '../components/Button';
 import { useSession } from '@/context/SessionContext';
 import { useBackend } from '@/hooks/useBackend';
@@ -19,6 +19,8 @@ const ProfileSettings = () => {
     govIdType: 'passport' as 'passport' | 'rfc' | 'ine' | 'other',
     govIdValue: ''
   });
+  const isCopying = useRef(false);
+  const [hasCopied, setHasCopied] = useState(false);
   const { getBackendActor } = useBackend()
 
 
@@ -136,6 +138,33 @@ const ProfileSettings = () => {
     }
   };
 
+  const handleCopyPrincipal = () => {
+    // Si ya estamos en proceso de copiado o se hizo hace poco, bloqueamos
+    if (isCopying.current) return;
+
+    isCopying.current = true;
+    const principalText = user.principal.toText();
+
+    navigator.clipboard.writeText(principalText)
+      .then(() => {
+        setHasCopied(true);
+        toast.success("Principal ID copied", {
+          id: "copy-principal", // ID ÚNICO: Esto evita que se amontonen los toasts
+          duration: 2000,
+        });
+
+        // Liberamos el bloqueo después de 2 segundos
+        setTimeout(() => {
+          isCopying.current = false;
+          setHasCopied(false);
+        }, 2000);
+      })
+      .catch(() => {
+        isCopying.current = false;
+        toast.error("Failed to copy");
+      });
+  };
+
   return (
     <div className="max-w-5xl mx-auto pt-24 px-6 pb-20">
       <header className="mb-10">
@@ -192,7 +221,20 @@ const ProfileSettings = () => {
                 <h2 className="font-bold uppercase tracking-wider text-sm">Personal Information</h2>
               </div>
 
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div
+                  onClick={handleCopyPrincipal}
+                  className="space-y-2 lg:col-span-2"
+                >
+                  <label className="text-xs text-zinc-500 ml-1">Principal ID</label>
+                  <div className="flex justify-center gap-5 w-full bg-white/7 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white  hover:bg-inda-dark cursor-pointer">
+                    <Fingerprint size={18} />
+                    <span>{user.principal.toText()}</span>
+                    <Copy size={18} />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-500 ml-1">First Name</label>
                   <input
@@ -260,7 +302,7 @@ const ProfileSettings = () => {
               Application Under Review
             </h4>
             <p className="text-[10px] text-amber-500/70 leading-tight">
-              Your application for a specialized profile is being processed in the canister. 
+              Your application for a specialized profile is being processed in the canister.
               We will notify you when the role is assigned
             </p>
           </div>

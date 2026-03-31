@@ -5,7 +5,8 @@
       "type": "motoko",
       "declarations": {
         "output": "./src/inda_frontend/src/declarations/backend"
-      }
+      },
+      "specified_id": "meao4-vaaaa-aaaaf-qaoeq-cai"
     },
     "frontend" : {
       "type": "assets",

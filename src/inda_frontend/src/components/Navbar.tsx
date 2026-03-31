@@ -11,10 +11,19 @@ import RegistrationModal from "./RegistrationModal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const MyCustomButton = (props: any) => {
-  const { loading, ...restProps } = props;
+  const { loading, onClick, ...restProps } = props;
+  
+  const handleClick = (e: React.MouseEvent) => {
+    // Si hay un onClick original de IdentityKit, lo llamamos
+    if (onClick) onClick(e);
+    // Y si existe una forma de cerrar el menú global (si estamos en móvil), lo hacemos
+    // Pero aquí no tenemos acceso directo a setIsMenuOpen a menos que lo pasemos o usemos un evento
+  };
+
   return (
     <Button
       className="text-white py-1 w-full md:w-40 transition-colors duration-200"
+      onClick={onClick}
       {...restProps}
     >
       {loading ? "Connecting..." : "Connect"}
@@ -27,7 +36,8 @@ const links = [
   { name: 'Features', href: '/#features' },
   { name: 'Token', href: '/#token' },
   { name: 'Roadmap', href: '/#roadmap' },
-  { name: 'Community', href: '/#community' }
+  { name: 'Community', href: '/#community' },
+  { name: 'Blog', href: '/blog'} 
 ];
 
 const Navbar = () => {
@@ -51,7 +61,9 @@ const Navbar = () => {
     )}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Logo variant={isScrolled ? 'default' : 'white'} />
+          <a href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center">
+            <Logo variant={isScrolled ? 'default' : 'white'} />
+          </a>
 
           {/* Desktop menu links */}
           <div className="hidden md:flex items-center space-x-1">
@@ -129,7 +141,9 @@ const Navbar = () => {
 
           <div className="text-center pt-4 border-t border-gray-100">
             {!user && (
-              <ConnectWallet connectButtonComponent={MyCustomButton} />
+              <div onClick={() => setIsMenuOpen(false)}>
+                <ConnectWallet connectButtonComponent={MyCustomButton} />
+              </div>
             )}
           </div>
 
