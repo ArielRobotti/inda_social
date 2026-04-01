@@ -44,18 +44,27 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      // disconnect() de useAuth limpia la identidad en el storage y el estado del kit
+      console.log("Iniciando logout...");
+      // 1. Desconectamos de IdentityKit
       await disconnect(); 
-      // Limpiamos nuestro estado local del CRM
+      
+      // 2. Limpiamos TODO el estado local del CRM inmediatamente
       setUser(null);
+      setRole(null);
+      setIsAdmin(false);
       setNeedsRegistration(false);
-      setPrincipalID("")
-      setLoading(false)
+      setPrincipalID("");
+      
+      console.log("Estado local limpiado");
 
+      // Opcional: Podríamos forzar un refresco si notamos que el kit se queda pegado
+      // window.location.href = "/";
+      
     } catch (e) {
       console.error("Error al cerrar sesión:", e);
     } finally {
-      setLoading(false);
+      setLoading(true); // Mantenemos loading un momento para evitar parpadeos
+      setTimeout(() => setLoading(false), 500);
     }
   }, [disconnect]);
 

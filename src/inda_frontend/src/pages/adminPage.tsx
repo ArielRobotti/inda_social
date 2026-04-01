@@ -1,16 +1,46 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, XCircle, ExternalLink, User as UserIcon, FileText } from 'lucide-react';
+import { ShieldCheck, XCircle, ExternalLink, User as UserIcon, FileText, Divide } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
-import { Request } from '@/declarations/backend/backend.did';
+import { Request, User } from '@/declarations/backend/backend.did';
 // import Button from '../components/Button';
 import { toast } from 'sonner';
 import { Principal } from '@dfinity/principal';
+import UserModal from "../components/UserModal"
+
+const formatRequestDate = (nanos: bigint) => {
+  const date = new Date(Number(nanos) / 1_000_000);
+  const ahora = new Date();
+  const isToday = date.toDateString() === ahora.toDateString();
+  
+  if (isToday) {
+    return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  return date.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 const AdminPage = () => {
     const [requests, setRequests] = useState<[Principal, Request][]>([]);
     const [loading, setLoading] = useState(true);
     const { backend } = useSession();
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [isFetchingUser, setIsFetchingUser] = useState(false);
+
+    const handleViewUser = async (principal: Principal) => {
+        setIsFetchingUser(true);
+        try {
+            const result = await backend.getUser(principal);
+            if ("Ok" in result) {
+                setSelectedUser(result.Ok);
+            } else {
+                toast.error("User not found");
+            }
+        } catch (error) {
+            toast.error("Failed to fetch user base data");
+        } finally {
+            setIsFetchingUser(false);
+        }
+    };
 
     const renderMetadataValue = (value: any): string => {
         if ('Text' in value) return value.Text;
@@ -38,13 +68,17 @@ const AdminPage = () => {
     if (loading) return <div className="p-20 text-center animate-pulse text-zinc-500">Loading requests...</div>;
 
     return (
-        <div className="max-w-7xl mx-auto pt-24 px-6 pb-20">
-            <header className="mb-10 flex justify-between items-end">
-                <div>
+        <div className="max-w-[90%] mx-auto pt-24 px-6 pb-20">
+            {/* Decoración: Línea de acento superior sutil */}
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-linear-to-r from-transparent via-inda-blue/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <header className="mb-10 w-full flex justify-between items-end">
+                <div className='w-full'>
+                    <h1 className="text-3xl text-center font-black text-white"> Admin Pannel</h1>
+                    <div className="h-[2px] w-full my-8 bg-linear-to-r from-transparent via-violet-400 to-transparent blur-[0.5px]" />
                     <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Pending Authorizations</h1>
                     <p className="text-zinc-500 text-sm">Review and verify decentralized identity requests.</p>
                 </div>
-                <div className="bg-zinc-900 border border-white/5 px-4 py-2 rounded-full text-[10px] font-mono text-inda-blue">
+                <div className="w-50 bg-zinc-900 border border-white/5 px-4 py-2 rounded-full text-[10px] font-mono text-inda-blue">
                     {requests.length} PENDING REQUESTS
                 </div>
             </header>
@@ -52,17 +86,34 @@ const AdminPage = () => {
             <div className="space-y-4">
                 {requests.map(([principal, req]) => (
                     <div key={principal.toString()} className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md hover:border-white/10 transition-all">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-inda-blue animate-pulse" />
+                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                                    System Request #{req.id.toString()}
+                                </span>
+                            </div>
+                            
+                            {/* LA FECHA MEJORADA */}
+                            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/5 rounded-full">
+                                <span className="text-[12px] font-mono text-zinc-300">
+                                    {formatRequestDate(req.id)}
+                                </span>
+                            </div>
+                        </div>
                         <div className="flex flex-col lg:flex-row gap-8">
-
                             {/* Info Principal */}
-                            <div className="flex-1 space-y-4">
-                                <div className="flex items-center gap-3">
+                            <div className="flex-1 space-y-4 cursor-pointer" onClick={() => handleViewUser(principal)}>
+                                <div
+                                    className="flex items-center gap-3"
+                                    
+                                >
                                     <div className="w-10 h-10 rounded-full bg-linear-to-br from-inda-blue to-inda-purple flex items-center justify-center">
                                         <UserIcon className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Principal ID</p>
-                                        {/* <p className="text-sm font-bold text-white truncate w-48 lg:w-full">{req[1].kind}</p> */}
+                                        {/* <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Principal ID</p> */}
+                                        <p className="text-sm font-bold text-white truncate max-w-50 lg:w-full">{principal.toString()}</p>
                                     </div>
                                 </div>
 
@@ -87,7 +138,7 @@ const AdminPage = () => {
                                                         Portfolio <ExternalLink className="w-3 h-3" />
                                                     </a>
                                                 )}
-                                                {req[1].kind.NewCreator.webSite[0] && (
+                                                {req.kind.NewCreator.webSite[0] && (
                                                     <a href={req.kind.NewCreator.webSite[0]} target="_blank" className="text-xs text-inda-blue hover:underline flex items-center gap-1">
                                                         Official Site <ExternalLink className="w-3 h-3" />
                                                     </a>
@@ -144,6 +195,17 @@ const AdminPage = () => {
                     </div>
                 )}
             </div>
+            {selectedUser && (
+                <UserModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+            )}
+
+            {isFetchingUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                    <div className="bg-zinc-900 px-6 py-3 rounded-full border border-white/10 text-white font-bold animate-bounce">
+                        Loading Sovereing Identity...
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -39,5 +39,13 @@ shared ({caller = DEPLOYER}) persistent actor class() = this  {
     User.isAdmin(userDB, target)
   };
 
+  public shared query ({ caller }) func getUser(p: Principal): async {#Ok: User.User; #Err} {
+    if(not User.isAdmin(userDB, caller)) return #Err;
+    switch (User.getUser(userDB, p)) {
+      case null #Err;
+      case (?u) #Ok(u)
+    };
+  };
+
 
 };

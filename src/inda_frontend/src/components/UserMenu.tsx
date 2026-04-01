@@ -73,7 +73,7 @@ const UserMenu = ({ user, role, onClose }: { user: User, role: Creator | Brand |
                 className="p-4 border-b border-zinc-800 mb-2 flex items-start gap-1 cursor-pointer transition-colors hover:bg-white/5"
                 onClick={() => handleNavigation("/", close)}
               >
-                <span className="text-lg font-bold text-white truncate w-60 hover:text-blue-300">Home</span>
+                <span className="text-lg text-[16px] font-bold text-white truncate w-60 hover:text-blue-300">Home</span>
                 <Home />
 
               </ConnectWalletDropdownMenuItem>
@@ -82,9 +82,9 @@ const UserMenu = ({ user, role, onClose }: { user: User, role: Creator | Brand |
                 className="p-4 border-b border-zinc-800 mb-2 flex items-start gap-1 cursor-pointer transition-colors hover:bg-white/5"
                 onClick={() => handleNavigation("/profileSettings", close)}
               >
-                <span className="text-lg font-bold text-white truncate w-60 hover:text-blue-300">{user.firstName} {user.lastName}</span>
+                <span className="text-lg text-[16px] font-bold text-white truncate w-60 hover:text-blue-300">{user.firstName} {user.lastName}</span>
                 {/* Badge de estado si no tiene rol */}
-                {!role && (
+                {!role && !user.roleRequestedOrAsigned && (
                   <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full border border-amber-500/20 mt-1">
                     Setup Account Role
                   </span>
@@ -102,8 +102,9 @@ const UserMenu = ({ user, role, onClose }: { user: User, role: Creator | Brand |
               )}
 
               <ConnectWalletDropdownMenuDisconnectItem
-                onClick={() => {
+                onClick={async () => {
                   closeAllMenus(close);
+                  navigate("/")
                   logout();
                 }}
                 className="w-full flex items-center gap-2 p-3 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer font-medium"

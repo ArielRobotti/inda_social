@@ -35,10 +35,8 @@ module {
   };
 
   public type GovernmentID = {
-    #ine : Nat;
-    #passport : Text;
-    #rfc : Nat;
-    #other : { k : Text; v : Text };
+    docType: Text;
+    value: Text;
   };
 
   public type LegalStatusBrand = {

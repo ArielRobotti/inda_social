@@ -1,11 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, Save, Shield, User as UserIcon, Fingerprint, Copy } from 'lucide-react';
+import { Camera, Save, Shield, User as UserIcon, Fingerprint, Copy, Plus, XCircle } from 'lucide-react';
 import Button from '../components/Button';
 import { useSession } from '@/context/SessionContext';
 import { useBackend } from '@/hooks/useBackend';
 import { compressAndConvertImage } from "../utils/imageManager"
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { MetadataPart, Value } from '@/declarations/backend/backend.did';
+import RoleRequestContainer from '@/components/RoleRequestContainer';
+
+
+const SOCIAL_CONFIG = {
+  fb: { label: 'Facebook', icon: '🌐', pattern: /(?:https?:\/\/)?(?:www\.)?facebook\.com\/(?:profile\.p?hp\?id=\d+|([\w.]+))/ },
+  ig: { label: 'Instagram', icon: '📸', pattern: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9.]+)/ },
+  tw: { label: 'X / Twitter', icon: '🐦', pattern: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/ },
+  tk: { label: 'TikTok', icon: '🎵', pattern: /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9.]+)/ },
+};
+
+
 
 
 const ProfileSettings = () => {
@@ -13,12 +25,19 @@ const ProfileSettings = () => {
   const navigate = useNavigate()
   const [isInitialCheckDone, setIsInitialCheckDone] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+
   const [creatorForm, setCreatorForm] = useState({
     portfolio: '',
     webSite: '',
     govIdType: 'passport' as 'passport' | 'rfc' | 'ine' | 'other',
     govIdValue: ''
   });
+  const [extraInputs, setExtraInputs] = useState({
+    artisticName: '',
+    networks: {} as Record<string, string>,
+  });
+  const [showNetworkPicker, setShowNetworkPicker] = useState(false);
+
   const isCopying = useRef(false);
   const [hasCopied, setHasCopied] = useState(false);
   const { getBackendActor } = useBackend()
@@ -103,6 +122,48 @@ const ProfileSettings = () => {
     setIsSaving(false);
   };
 
+  const handleAddNetwork = (type: string, url: string) => {
+    const config = SOCIAL_CONFIG[type as keyof typeof SOCIAL_CONFIG];
+    const match = url.match(config.pattern);
+
+    if (match) {
+      const username = match[1] || match[0]; // Extrae el grupo capturado
+      setExtraInputs(prev => ({
+        ...prev,
+        networks: { ...prev.networks, [type]: username }
+      }));
+      toast.success(`${config.label} added!`);
+    } else {
+      toast.error("Invalid profile link for " + config.label);
+    }
+  };
+
+  const prepareExtraData = () => {
+    const extraData: MetadataPart[] = [];
+
+    // 1. Nombre Artístico (Text)
+    if (extraInputs.artisticName) {
+      extraData.push({
+        key: "artisticName",
+        value: { Text: extraInputs.artisticName }
+      });
+    }
+
+    // 2. Networks (Map)
+    if (Object.keys(extraInputs.networks).length > 0) {
+      const networkEntries = Object.entries(extraInputs.networks).map(([net, user]) => {
+        return [net, { Text: user }] as [string, Value];
+      });
+
+      extraData.push({
+        key: "networks",
+        value: { Map: networkEntries }
+      });
+    }
+
+    return extraData;
+  };
+
   const handleRequestCreator = async () => {
     setIsSaving(true);
     try {
@@ -166,7 +227,7 @@ const ProfileSettings = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto pt-24 px-6 pb-20">
+    <div className="max-w-full md:max-w-[80%] mx-auto pt-24 px-2 md:px-6 pb-20">
       <header className="mb-10">
         <h1 className="text-4xl font-black text-white tracking-tight">Settings</h1>
         <p className="text-zinc-500 mt-2">Manage your sovereign identity on Indasocial.</p>
@@ -230,7 +291,7 @@ const ProfileSettings = () => {
                   <label className="text-xs text-zinc-500 ml-1">Principal ID</label>
                   <div className="flex justify-center gap-5 w-full bg-white/7 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white  hover:bg-inda-dark cursor-pointer">
                     <Fingerprint size={18} />
-                    <span>{user.principal.toText()}</span>
+                    <span>{user?.principal.toText()}</span>
                     <Copy size={18} />
                   </div>
                 </div>
@@ -309,83 +370,11 @@ const ProfileSettings = () => {
         </div>
       )}
       {user && !user.roleRequestedOrAsigned && (
-        <div className="space-y-6 pt-8 border-t border-white/5">
-          <div className="flex items-center gap-2 text-inda-purple">
-            <Shield className="w-5 h-5" />
-            <h2 className="font-bold uppercase tracking-wider text-xs">Request Specialized Profile</h2>
-          </div>
+        // <div className="space-y-6 pt-8 border-t border-white/5">
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Botón Creador */}
-            <button
-              onClick={() => setSelectedRole('creator')}
-              className={`p-4 rounded-2xl border transition-all text-left ${selectedRole === 'creator' ? "bg-inda-blue/10 border-inda-blue" : "bg-white/5 border-white/10"
-                }`}
-            >
-              <span className="text-2xl mb-2 block">🎨</span>
-              <h4 className="font-bold text-white text-sm">Creator</h4>
-              <p className="text-[10px] text-zinc-500">Assets 3D & Content</p>
-            </button>
+          <RoleRequestContainer backendAccessor={getBackendActor} onRefresh={refreshSession}/>
 
-            {/* Otros roles deshabilitados por ahora */}
-            <div className="p-4 rounded-2xl border border-white/5 opacity-40 cursor-not-allowed">
-              <span className="text-2xl mb-2 block">🏢</span>
-              <h4 className="font-bold text-white text-sm">Brand</h4>
-              <p className="text-[10px] text-zinc-500 italic">Coming soon</p>
-            </div>
-            <div className="p-4 rounded-2xl border border-white/5 opacity-40 cursor-not-allowed">
-              <span className="text-2xl mb-2 block">🤝</span>
-              <h4 className="font-bold text-white text-sm">Partner</h4>
-              <p className="text-[10px] text-zinc-500 italic">Coming soon</p>
-            </div>
-          </div>
-
-          {/* Formulario extra si selecciona Creador */}
-          {selectedRole === 'creator' && (
-            <div className="bg-inda-blue/5 border border-inda-blue/20 rounded-2xl p-6 space-y-4 animate-in fade-in slide-in-from-top-2">
-              <h3 className="text-sm font-bold text-white mb-4">Creator Application Details</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  placeholder="Portfolio URL"
-                  className="bg-zinc-900 border border-white/10 p-3 rounded-xl text-sm outline-none focus:border-inda-blue"
-                  onChange={(e) => setCreatorForm({ ...creatorForm, portfolio: e.target.value })}
-                />
-                <input
-                  placeholder="Website URL"
-                  className="bg-zinc-900 border border-white/10 p-3 rounded-xl text-sm outline-none focus:border-inda-blue"
-                  onChange={(e) => setCreatorForm({ ...creatorForm, webSite: e.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-4">
-                <select
-                  className="bg-zinc-900 border border-white/10 p-3 rounded-xl text-sm text-zinc-400 outline-none"
-                  value={creatorForm.govIdType}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  onChange={(e: any) => setCreatorForm({ ...creatorForm, govIdType: e.target.value })}
-                >
-                  <option value="passport">Passport</option>
-                  <option value="rfc">RFC (BigInt)</option>
-                  <option value="ine">INE (BigInt)</option>
-                </select>
-                <input
-                  placeholder="Document ID Value"
-                  className="flex-1 bg-zinc-900 border border-white/10 p-3 rounded-xl text-sm outline-none focus:border-inda-blue"
-                  onChange={(e) => setCreatorForm({ ...creatorForm, govIdValue: e.target.value })}
-                />
-              </div>
-
-              <Button
-                onClick={handleRequestCreator}
-                className="w-full bg-inda-blue! text-white! py-3 rounded-xl font-bold"
-                disabled={isSaving || !creatorForm.govIdValue}
-              >
-                Submit Creator Request
-              </Button>
-            </div>
-          )}
-        </div>
+        // </div>
       )}
     </div>
   );
