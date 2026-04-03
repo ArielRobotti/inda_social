@@ -87,6 +87,10 @@ shared ({caller = DEPLOYER}) persistent actor class() = this  {
   public shared query ({ caller }) func readPost(postId: Int): async {#Ok: Blog.PostExpand; #Err: Text} {
     Blog.readPost(blog, caller, postId);
   };
+  
+  public shared ({ caller }) func getPaginatePost({page: Nat}): async {posts: [Blog.PostPreview]; hasNext: Bool}{
+    Blog.getPaginatePosts(blog, caller, page)
+  };
 
   public shared ({ caller }) func deletePost(postId: Int): async {#Ok; #Err: Text} {
     Blog.deletePost(blog, caller, postId);

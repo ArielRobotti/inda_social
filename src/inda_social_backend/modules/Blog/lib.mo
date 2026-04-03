@@ -190,6 +190,13 @@ module {
     #Ok(postExpand(post))
   };
 
+  public func getPaginatePosts(b: Blog, caller: Principal, page: Nat): {posts: [PostPreview]; hasNext: Bool } {
+    if(Map.size(b.posts) < page * 10){
+      return {posts = []; hasNext = false}
+    };
+    {posts = []; hasNext = false}
+  };
+
   public func deletePost(b: Blog, caller: Principal, postId: Int): {#Ok; #Err: Text} {
     let post = switch(Map.get(b.posts, ihash, postId)){
       case null return #Err("Post not found");
