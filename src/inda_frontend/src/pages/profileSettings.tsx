@@ -17,9 +17,6 @@ const SOCIAL_CONFIG = {
   tk: { label: 'TikTok', icon: '🎵', pattern: /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9.]+)/ },
 };
 
-
-
-
 const ProfileSettings = () => {
   const { user, role, loading, updateProfile, refreshSession } = useSession();
   const navigate = useNavigate()
@@ -41,6 +38,8 @@ const ProfileSettings = () => {
   const isCopying = useRef(false);
   const [hasCopied, setHasCopied] = useState(false);
   const { getBackendActor } = useBackend()
+
+  console.log(role)
 
 
   useEffect(() => {

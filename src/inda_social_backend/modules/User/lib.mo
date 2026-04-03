@@ -1,10 +1,11 @@
 import Map "mo:map/Map";
 import Set "mo:map/Set";
 import { phash } "mo:map/Map";
-import Principal "mo:base/Principal";
-import { now } "mo:base/Time";
-import Int "mo:base/Int";
-import Array "mo:base/Array";
+import Principal "mo:core/Principal";
+import { now } "mo:core/Time";
+import Int "mo:core/Int";
+import Array "mo:core/Array";
+import Shared "../../Shared";
 
 module {
 
@@ -12,21 +13,9 @@ module {
   // 1. Tipos de Utilidad / Base (Base Types)
   // ===============================================
 
-  public type Value = {
-    #Nat : Nat;
-    #Int : Int;
-    #Blob : Blob;
-    #Text : Text;
-    #Array : [Value];
-    #Map : [(Text, Value)];
-  };
-
-  public type MetadataPart = {
-    key : Text;
-    value : Value;
-  };
-
-  public type Metadata = [MetadataPart];
+  public type MetadataPart = Shared.MetadataPart;
+  public type Metadata = Shared.Metadata;
+  public type Value = Shared.Value;
 
   public type Verification = {
     #Email;
@@ -84,6 +73,13 @@ module {
     lastActivity : Int;
     roleRequestedOrAsigned: Bool; 
     verifications : [Verification];
+  };
+
+  public type UserPreview = {
+    thumbnail : ?Blob;
+    scoring: Nat;
+    principal: Principal;
+    name: Text; // Se puede extraer del usuario base o si tiene rol se extrae del Rol
   };
 
   public type Creator = {
@@ -184,6 +180,62 @@ module {
     ignore Map.put(s.requests, phash, u, r)
   };
 
+  func resolveUserName(s: State, u: User): Text {
+    let creator = Map.get(s.creators, phash, u.principal);
+    let brand = Map.get(s.brands, phash, u.principal);
+    let partnership = Map.get(s.partnerships, phash, u.principal);
+    let nameRoleProfile = switch (creator, brand, partnership) {
+      case (?c, null, null) {
+        let nameItem = Array.find<MetadataPart>(
+          c.extendedData, 
+          func item = switch (item.key) {
+            case ("ArtisticName") true;
+            case (_) false 
+          }
+        );
+        switch nameItem {
+          case (?nameItem) {
+            switch(nameItem.value) { case(#Text(name)) name; case(_) "" }
+          };
+          case _ ""
+        }
+      };
+      case (null, ?b, null) {
+        let nameItem = Array.find<MetadataPart>(
+          b.extendedData, 
+          func item = switch (item.key) {
+            case ("BrandName") true;
+            case (_) false 
+          }
+        );
+        switch nameItem {
+          case (?nameItem) {
+            switch(nameItem.value) { case(#Text(name)) name; case(_) "" }
+          };
+          case _ ""
+        }
+      };
+      case (null, null, ?p) {
+        let nameItem = Array.find<MetadataPart>(
+          p.extendedData, 
+          func item = switch (item.key) {
+            case ("PartenerName") true;
+            case (_) false 
+          }
+        );
+        switch nameItem {
+          case (?nameItem) {
+            switch(nameItem.value) { case(#Text(name)) name; case(_) "" }
+          };
+          case _ ""
+        }
+      };
+      case (_, _, _ ) {
+        ""
+      }
+    };
+    if (nameRoleProfile != "") nameRoleProfile else u.firstName # " " # u.lastName
+  };
   // ===============================================
   // 6. Funciones Publicas
   // ===============================================
@@ -287,8 +339,28 @@ module {
     Map.get<Principal, User>(s.users, phash, p);
   };
 
+  public func getAllUsers(s: State) : [User] {
+    Array.map<(Principal, User), User>(
+      Map.toArray(s.users), 
+      func entry = {entry.1 with thumbnail = null; avatar = null}
+    )
+  };
+
   public func isUser(s : State, p : Principal) : Bool {
     Map.has<Principal, User>(s.users, phash, p);
+  };
+
+
+  public func getUserPreview(s: State, p: Principal): {#Ok: UserPreview; #Err: Text } {
+    switch(getUser(s, p)) {
+      case null #Err("User not found");
+      case ( ?user ) {
+        #Ok({
+          user with
+          name = resolveUserName(s, user)
+        })
+      }
+    }
   };
 
   public func isCreator(s: State, p: Principal): Bool {
@@ -314,7 +386,40 @@ module {
     if(not isAdmin(s, caller)) { return #Err};
     ignore Set.put(s.admins, phash, newAdmin);
     #Ok
-  }
+  };
+
+  public func acceptRoleRequest(s: State, caller: Principal, user: Principal) : { #Ok; #Err } {
+    if(not isAdmin(s, caller)) { return #Err};
+    switch(Map.get<Principal, Request>(s.requests, phash, user)){
+      case null return #Err;
+      case (?r) {
+        
+        switch (r.kind){
+          case (#NewCreator(data)) {
+            let newCreator: Creator = {data with verified = true};
+            let dataRegistry: Metadata = [
+              {key = "requestRegistryDate"; value = #Int(r.id)},
+              {key = "acceptRegistryDate"; value = #Int(now())},
+              {key = "acceptorAdmin"; value = #Text(Principal.toText(caller))}
+            ];
+            let extendedData = Array.concat(data.extendedData, dataRegistry);
+            ignore Map.put(s.creators, phash, user, {newCreator with extendedData});
+
+            // Conservar la fecha de registro
+            ignore Map.remove(s.requests, phash, user);
+          };
+          case _ { } //TODO
+        }
+      };
+    };
+    return #Ok
+  };
+  
+  public func rejectRoleRequest(s: State, caller: Principal, user: Principal) : { #Ok; #Err } {
+    if(not isAdmin(s, caller)) { return #Err};
+    ignore Map.remove <Principal, Request>(s.requests, phash, user);  
+    return #Ok
+  } 
 
   // ===============================================
   // 6. Funciones Publicas

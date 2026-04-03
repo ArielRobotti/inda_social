@@ -37,7 +37,7 @@ const RegistrationModal = () => {
     try {
       // Convertimos el email al formato Option [string] que espera el backend
       const formattedData = {
-        firstName: formData.firstName.trim().charAt(0).toUpperCase() + formData.firstName.trim().slice(1).toLowerCase(),
+        firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim().charAt(0).toUpperCase() + formData.lastName.trim().slice(1).toLowerCase(),
         bio: formData.bio,
         email: formData.email ? [formData.email] as [string] : [] as [string] | []
@@ -99,7 +99,7 @@ const RegistrationModal = () => {
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-white focus:border-inda-blue outline-none transition-all"
                 placeholder="name@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})}
               />
             </div>
           </div>

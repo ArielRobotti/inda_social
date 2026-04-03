@@ -15,7 +15,7 @@ const CreatorForm = ({ onSubmit, isSaving }: Props) => {
   const [formData, setFormData] = useState({
     portfolio: '',
     webSite: '',
-    govIdType: 'passport' as 'passport' | 'rfc' | 'ine' | 'dni',
+    // govIdType: 'passport' as 'passport' | 'rfc' | 'ine' | 'dni',
     govIdValue: '',
   });
 
@@ -32,6 +32,7 @@ const CreatorForm = ({ onSubmit, isSaving }: Props) => {
   // Al cambiar el país, reseteamos el tipo de documento al primero disponible de ese país
   const handleCountryChange = (countryCode: string) => {
     const code = countryCode as keyof typeof COUNTRY_IDENTITY_CONFIG;
+    updateMetadata({key: "country", value: {Text: countryCode}})
     setSelectedCountry(code);
     setDocType(COUNTRY_IDENTITY_CONFIG[code].documents[0].id);
     setDocValue('');
@@ -73,19 +74,39 @@ const CreatorForm = ({ onSubmit, isSaving }: Props) => {
         docType: `${docType}_${selectedCountry}`,
         value: docValue
       }],
-      extendedData: extendedData,
+      extendedData: extraData,
     };
 
     onSubmit(payload);
   };
+  const updateMetadata = ({key, value}: MetadataPart) => {
+    setExtraData(prev => {
+      // 1. Buscamos si ya existe esa pieza de metadata
+      const index = prev.findIndex(m => m.key === key);
+      
+      // 2. Creamos el nuevo objeto con el formato de Motoko/Candid
+      const newPart: MetadataPart = { key, value };
 
-  const [extraData, setExtraData] = useState({
-  birthDate: '',
-  gender: 'not_specified',
-  category: '3d_artist',
-  country: 'AR',
-  pitch: ''
-});
+      if (index !== -1) {
+        // Si existe, reemplazamos el elemento en esa posición
+        const updated = [...prev];
+        updated[index] = newPart;
+        return updated;
+      } else {
+        // Si no existe, lo agregamos al final
+        return [...prev, newPart];
+      }
+    });
+  };
+
+  // const [extraData, setExtraData] = useState({
+  //   birthDate: '',
+  //   gender: 'not_specified',
+  //   category: '3d_artist',
+  //   country: 'AR',
+  //   pitch: ''
+  // });
+  const [extraData, setExtraData] = useState<MetadataPart[]>([])
 
 // 2. Renderizado Compacto
 return (
@@ -103,7 +124,7 @@ return (
         <input 
           type="date" 
           className="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-xs text-white outline-none focus:border-inda-blue color-scheme-dark"
-          onChange={(e) => setExtraData({...extraData, birthDate: e.target.value})}
+          onChange={(e) => updateMetadata({key: "birthDate", value: {Text: e.target.value}})}
         />
       </div>
 
@@ -111,7 +132,7 @@ return (
         <label className="text-[10px] text-zinc-500 font-bold uppercase ml-1">Gender</label>
         <select 
           className="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-xs text-white outline-none focus:border-inda-blue"
-          onChange={(e) => setExtraData({...extraData, gender: e.target.value})}
+          onChange={(e) => updateMetadata({key: "gender", value: {Text: e.target.value}})}
         >
           <option value="not_specified">Prefer not to say</option>
           <option value="male">Male</option>
@@ -124,7 +145,7 @@ return (
         <label className="text-[10px] text-zinc-500 font-bold uppercase ml-1">Primary Focus</label>
         <select 
           className="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-xs text-white outline-none focus:border-inda-blue"
-          onChange={(e) => setExtraData({...extraData, category: e.target.value})}
+          onChange={(e) => updateMetadata({key: "category", value: {Text: e.target.value}})}
         >
           <option value="3d_artist">3D Artist</option>
           <option value="fashion">Fashion Designer</option>
@@ -183,17 +204,19 @@ return (
       <input
         placeholder="Portfolio URL (Behance, ArtStation, etc.)"
         className="bg-black/20 border border-white/10 p-4 rounded-2xl text-xs text-white outline-none focus:border-inda-blue"
-        onChange={(e) => setFormData({ ...formData, portfolio: e.target.value })}
+        // onChange={(e) => setFormData({ ...formData, portfolio: e.target.value })}
+        onChange={(e) => updateMetadata({key: "portfolio", value: {Text: e.target.value}})}
       />
       <input
         placeholder="Personal Website / Linktree"
         className="bg-black/20 border border-white/10 p-4 rounded-2xl text-xs text-white outline-none focus:border-inda-blue"
-        onChange={(e) => setFormData({ ...formData, webSite: e.target.value })}
+        // onChange={(e) => setFormData({ ...formData, webSite: e.target.value })}
+        onChange={(e) => updateMetadata({key: "webSite", value: {Text: e.target.value}})}
       />
     </div>
 
     {/* SECCIÓN 4: PRESENCIA DIGITAL (REDES) */}
-    <DigitalPresenceFields data={presence} onChange={setPresence} nameLabel="Artistic / Brand Name" />
+    <DigitalPresenceFields extraData={extraData} updateMetadata={updateMetadata} nameLabel="ArtisticName" />
 
     {/* SECCIÓN 5: EL "PITCH" FINAL */}
     <div className="space-y-1">
@@ -202,14 +225,14 @@ return (
         rows={2}
         placeholder="Briefly describe your work and goals..."
         className="w-full bg-black/20 border border-white/10 p-4 rounded-2xl text-xs text-white outline-none focus:border-inda-blue resize-none"
-        onChange={(e) => setExtraData({...extraData, pitch: e.target.value})}
+        onChange={(e) => updateMetadata({key: "birthDpitchate", value: {Text: e.target.value}})}
       />
     </div>
 
     <Button
       onClick={handleInternalSubmit}
       className="w-full bg-inda-blue! text-white! py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px]"
-      disabled={isSaving || !docValue || !presence.name}
+      disabled={isSaving || !docValue }
     >
       {isSaving ? "Synchronizing with Blockchain..." : "Send Application"}
     </Button>

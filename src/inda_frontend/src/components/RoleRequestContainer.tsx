@@ -84,7 +84,7 @@ const RoleCard = ({ id, icon, title, desc, active, disabled, onClick }: any) => 
   <button
     disabled={disabled}
     onClick={() => onClick(id)}
-    className={`p-4 rounded-2xl border transition-all text-left ${
+    className={`p-4 rounded-2xl border transition-all text-left cursor-pointer ${
       active ? "bg-inda-blue/10 border-inda-blue" : "bg-white/5 border-white/10"
     } ${disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/20"}`}
   >
